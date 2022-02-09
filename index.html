@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Baltimore Homicides and Non-Fatal Shootings Tracker</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css' rel='stylesheet' />
+
+    <div id='map'></div>
+    <div id='console'>
+        <h1>Baltimore Homicides and Non-Fatal Shootings Tracker</h1>
+        <h2>(for internal use & reference @ Baltimore Witness)<br>by: Mark Lu, Data Reporter</h2>
+        <h3>up-to-date as of Feb. 8, 2022</h3>
+    </div>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Calibri';
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+
+        h1 {
+            font-size: 20px;
+            line-height: 20px;
+        }
+
+        h2 {
+            font-size: 15px;
+            font-style: italic;
+            line-height: 20px;
+            margin-bottom: 0px;
+        }
+
+        h3 {
+            font-size: 15px;
+            line-height: 0px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 12px;
+            line-height: 14px;
+            margin-bottom: 10px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #2dc4b2;
+        }
+
+        #console {
+            position: absolute;
+            margin: 0;
+            top: 90%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 7px;
+            background-color: white;
+        }
+
+        .session {
+            margin-bottom: 20px;
+        }
+
+        .row {
+            height: 12px;
+            width: 100%;
+        }
+
+        .colors {
+            background: linear-gradient(to right, #d2e3f6, #0047ab);
+            margin-bottom: 5px;
+        }
+
+        .label {
+            width: 15%;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .mapboxgl-popup {
+            max-width: 400px;
+            font: 12px 'Montserrat', Arial, Helvetica, sans-serif;
+        }
+    </style>
+
+</head>
+
+</body>
+
+<script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoibWFya3dpdG5lc3MiLCJhIjoiY2t1MzJrMXlqMWs3bDJub3drZXpkanRvNCJ9.2BjudxpFLs4rd7F4HptGQw';
+
+    const bounds = [
+        [-76.87024830350663, 39.084191977214225],
+        [-76.33310632725752, 39.55386865594705]
+    ];
+
+    const map = new mapboxgl.Map({
+        container: 'map', // container element id
+        style: 'mapbox://styles/markwitness/ckzfp78pz000f15qousvaa6h9',
+        center: [-76.6151058625139, 39.3032928654391], // initial map center in [lon, lat]
+        zoom: 11,
+        maxBounds: bounds
+    });
+
+    let hoveredStateId = null;
+
+    map.on('load', () => {
+
+        map.addSource('balt_clusters', {
+            'type': 'geojson',
+            'data': 'https://raw.githubusercontent.com/ludcw/bpd-incidents-tracker/main/neighclusters-balt.geojson'
+        });
+
+        map.addLayer({
+            'id': 'boundary',
+            'type': 'line',
+            'source': 'balt_clusters',
+            'paint': {
+                'line-color': 'white',
+                'line-width': 2,
+                'line-opacity': 0.75
+            }
+        })
+
+        map.addSource('baltincidents', {
+            'type': 'geojson',
+            'data': 'https://raw.githubusercontent.com/ludcw/bpd-incidents-tracker/main/exp2922.geojson'
+        });
+
+        map.addLayer({
+
+            id: 'incidents_main',
+            type: 'circle',
+            source: 'baltincidents',
+            paint: {
+                'circle-stroke-color': 'Black',
+                'circle-stroke-width': 1,
+                'circle-radius': 6,
+                'circle-color': [
+                    "match",
+                    ["get", "INCIDENT_TYPE"],
+                    ["non-fatal shooting"],
+                    "#6466f7",
+                    "hsl(0, 93%, 61%)"
+                ],
+                'circle-opacity': 0.75
+            }
+
+        });
+
+
+
+        // I LOVVVEEEE variables, dude. Can't get enough of them.
+
+
+        map.on('click', 'incidents_main', function (e) {
+            var coordinates = e.features[0].geometry.coordinates.slice();
+            var display = e.features[0].properties.DISPLAY_INFO;
+
+            // Ensure that if the map is zoomed out such that multiple
+            // copies of the feature are visible, the popup appears
+            // over the copy being pointed to.
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+            }
+
+            new mapboxgl.Popup()
+                .setLngLat(coordinates)
+                .setHTML(display)
+                .addTo(map);
+        });
+
+        map.on('mouseenter', 'incidents_main', (event) => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', 'incidents_main', () => {
+            map.getCanvas().style.cursor = '';
+        });
+
+    });
+
+
+
+</script>
+
+</html>
